@@ -1,3 +1,7 @@
+# Exclude agentic AI request files
+tasks/*
+!tasks/story-1-r1-template.md
+
 node_modules
 dist
 *.local
