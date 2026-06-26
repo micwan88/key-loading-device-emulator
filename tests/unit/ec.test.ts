@@ -60,7 +60,7 @@ describe.each(CURVES)("EC operations for %s", (curve) => {
     expect(await publicKeyToHex(restored)).toBe(await publicKeyToHex(pair));
   });
 
-  it("exports the public key as SPKI PEM and DER", async () => {
+  it("exports the public key as SPKI PEM, DER and HEX", async () => {
     const pair = await generateKeyPair(curve);
     const pem = await exportPublicSpki(pair, "pem");
     expect(typeof pem).toBe("string");
@@ -69,6 +69,10 @@ describe.each(CURVES)("EC operations for %s", (curve) => {
     const der = await exportPublicSpki(pair, "der");
     expect(der).toBeInstanceOf(Uint8Array);
     expect((der as Uint8Array)[0]).toBe(0x30); // ASN.1 SEQUENCE
+
+    const hex = (await exportPublicSpki(pair, "hex")) as string;
+    expect(hex).toMatch(/^[0-9A-F]+$/); // uppercase HEX of the DER
+    expect(hex).toBe(bytesToHex(der as Uint8Array).toUpperCase());
   });
 });
 

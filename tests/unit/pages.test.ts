@@ -38,10 +38,11 @@ describe("EC Keypair page", () => {
     ]) {
       expect(root.querySelector(`[data-testid="${id}"]`), id).toBeTruthy();
     }
-    // Curve dropdown offers the three NIST curves.
+    // Curve dropdown offers the three NIST curves, defaulting to P-521.
     expect(root.querySelectorAll('[data-testid="curve"] option')).toHaveLength(3);
-    // Public export format offers PEM and DER.
-    expect(root.querySelectorAll('[data-testid="spki-format"] option')).toHaveLength(2);
+    expect((root.querySelector('[data-testid="curve"]') as HTMLSelectElement).value).toBe("P-521");
+    // Public export format offers PEM, DER and HEX.
+    expect(root.querySelectorAll('[data-testid="spki-format"] option')).toHaveLength(3);
   });
 
   it("blocks reconstruction when only one hex field is filled", () => {

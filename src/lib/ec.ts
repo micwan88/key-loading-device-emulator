@@ -28,9 +28,9 @@ export function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export function hexToBytes(hex: string): Uint8Array {
+export function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
   const clean = hex.trim().replace(/\s+/g, "").toLowerCase();
-  if (clean.length === 0 || clean.length % 2 !== 0 || /[^0-9a-f]/.test(clean)) {
+  if (clean.length % 2 !== 0 || /[^0-9a-f]/.test(clean)) {
     throw new Error("Invalid HEX string");
   }
   const out = new Uint8Array(clean.length / 2);
@@ -199,12 +199,14 @@ export async function importKeyPairFromPkcs8Pem(pem: string): Promise<ECKeyPair>
 // Public key export: X.509 SubjectPublicKeyInfo (SPKI), PEM or DER
 // ---------------------------------------------------------------------------
 
-export type SpkiFormat = "pem" | "der";
+export type SpkiFormat = "pem" | "der" | "hex";
 
 export async function exportPublicSpki(
   pair: ECKeyPair,
   format: SpkiFormat,
 ): Promise<string | Uint8Array> {
   const der = new Uint8Array(await crypto.subtle.exportKey("spki", pair.publicKey));
-  return format === "pem" ? toPem("PUBLIC KEY", der) : der;
+  if (format === "pem") return toPem("PUBLIC KEY", der);
+  if (format === "hex") return bytesToHex(der).toUpperCase(); // DER content as uppercase HEX
+  return der;
 }

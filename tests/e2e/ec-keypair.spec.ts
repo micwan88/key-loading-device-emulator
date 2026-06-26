@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
-const HEX = /^[0-9a-f]+$/;
+const HEX = /^[0-9A-F]+$/; // on-screen hex is uppercase
 
 test("landing page links to the EC Keypair feature", async ({ page }) => {
   await page.goto("/key-loading-device-emulator/");
-  const item = page.getByTestId("menu-item");
-  await expect(item).toContainText("EC Keypair");
+  const item = page.getByTestId("menu-item").filter({ hasText: "EC Keypair" });
+  await expect(item).toBeVisible();
   await item.click();
   await expect(page.getByRole("heading", { name: "EC Keypair" })).toBeVisible();
 });

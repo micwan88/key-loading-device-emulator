@@ -29,59 +29,61 @@ function download(filename: string, data: string | Uint8Array, mime: string): vo
 export function renderEcKeypair(root: HTMLElement): void {
   root.innerHTML = `
     <section class="mx-auto max-w-3xl p-6">
-      <a href="#/" class="text-sm text-slate-500 hover:underline">&larr; Back</a>
-      <h1 class="text-2xl font-bold mt-2 mb-6">EC Keypair</h1>
+      <h1 class="text-2xl font-bold mb-6">EC Keypair</h1>
 
       <div class="flex flex-wrap items-end gap-3 mb-6">
         <label class="flex flex-col text-sm">
-          <span class="mb-1 text-slate-600">Curve</span>
-          <select data-testid="curve" class="rounded border border-slate-300 bg-white px-3 py-2">
-            ${CURVES.map((c) => `<option value="${c}">${c}</option>`).join("")}
+          <span class="mb-1 text-muted">Curve</span>
+          <select data-testid="curve" class="rounded border border-line bg-elevated px-3 py-2">
+            ${CURVES.map(
+              (c) => `<option value="${c}"${c === "P-521" ? " selected" : ""}>${c}</option>`,
+            ).join("")}
           </select>
         </label>
         <button data-testid="generate"
-          class="rounded bg-slate-800 px-4 py-2 text-white hover:bg-slate-700">
+          class="rounded bg-accent px-4 py-2 text-accent-contrast font-medium hover:opacity-90">
           Generate keypair
         </button>
       </div>
 
       <div class="grid gap-4 mb-4">
         <label class="flex flex-col text-sm">
-          <span class="mb-1 text-slate-600">Private key (HEX scalar)</span>
+          <span class="mb-1 text-muted">Private key (HEX scalar)</span>
           <textarea data-testid="private-hex" rows="3"
-            class="rounded border border-slate-300 bg-white px-3 py-2 font-mono text-xs break-all"></textarea>
+            class="rounded border border-line bg-elevated px-3 py-2 font-mono text-xs break-all"></textarea>
         </label>
         <label class="flex flex-col text-sm">
-          <span class="mb-1 text-slate-600">Public key (HEX, uncompressed 04||x||y)</span>
+          <span class="mb-1 text-muted">Public key (HEX, uncompressed 04||x||y)</span>
           <textarea data-testid="public-hex" rows="3"
-            class="rounded border border-slate-300 bg-white px-3 py-2 font-mono text-xs break-all"></textarea>
+            class="rounded border border-line bg-elevated px-3 py-2 font-mono text-xs break-all"></textarea>
         </label>
         <div>
           <button data-testid="apply-hex"
-            class="rounded border border-slate-400 px-4 py-2 hover:bg-slate-100">
+            class="rounded border border-line px-4 py-2 hover:bg-elevated">
             Apply pasted HEX
           </button>
         </div>
       </div>
 
-      <div class="flex flex-wrap items-end gap-3 mb-6 border-t border-slate-200 pt-6">
+      <div class="flex flex-wrap items-end gap-3 mb-6 border-t border-line pt-6">
         <button data-testid="save-keypair"
-          class="rounded border border-slate-400 px-4 py-2 hover:bg-slate-100">
+          class="rounded border border-line px-4 py-2 hover:bg-elevated">
           Save keypair (PKCS#8 PEM)
         </button>
-        <label class="rounded border border-slate-400 px-4 py-2 hover:bg-slate-100 cursor-pointer">
+        <label class="rounded border border-line px-4 py-2 hover:bg-elevated cursor-pointer">
           Restore keypair from file
           <input data-testid="restore-file" type="file" accept=".pem,.key,.txt" class="hidden" />
         </label>
         <label class="flex flex-col text-sm">
-          <span class="mb-1 text-slate-600">Public export format</span>
-          <select data-testid="spki-format" class="rounded border border-slate-300 bg-white px-3 py-2">
+          <span class="mb-1 text-muted">Public export format</span>
+          <select data-testid="spki-format" class="rounded border border-line bg-elevated px-3 py-2">
             <option value="pem">PEM</option>
             <option value="der">DER</option>
+            <option value="hex">HEX</option>
           </select>
         </label>
         <button data-testid="export-public"
-          class="rounded border border-slate-400 px-4 py-2 hover:bg-slate-100">
+          class="rounded border border-line px-4 py-2 hover:bg-elevated">
           Export public key (X.509)
         </button>
       </div>
@@ -102,15 +104,15 @@ export function renderEcKeypair(root: HTMLElement): void {
 
   function setStatus(msg: string, isError = false): void {
     statusEl.textContent = msg;
-    statusEl.className = `text-sm min-h-5 ${isError ? "text-red-600" : "text-green-700"}`;
+    statusEl.className = `text-sm min-h-5 ${isError ? "text-danger" : "text-success"}`;
   }
 
   async function showKeyPair(): Promise<void> {
     const pair = getKeyPair();
     if (!pair) return;
     curveEl.value = pair.curve;
-    privateEl.value = await privateKeyToHex(pair);
-    publicEl.value = await publicKeyToHex(pair);
+    privateEl.value = (await privateKeyToHex(pair)).toUpperCase();
+    publicEl.value = (await publicKeyToHex(pair)).toUpperCase();
   }
 
   // Restore display from the store on (re)entering the page — req 9.
@@ -188,6 +190,8 @@ export function renderEcKeypair(root: HTMLElement): void {
     const data = await exportPublicSpki(pair, format);
     if (format === "pem") {
       download(`ec-public-${pair.curve}.spki.pem`, data, "application/x-pem-file");
+    } else if (format === "hex") {
+      download(`ec-public-${pair.curve}.spki.hex.txt`, data, "text/plain");
     } else {
       download(`ec-public-${pair.curve}.spki.der`, data, "application/octet-stream");
     }

@@ -1,1 +1,23 @@
 @import "tailwindcss";
+
+/* Map Tailwind color utilities to the runtime theme variables set by
+   src/lib/theme.ts (which reads src/config/theme.ts). */
+@theme {
+  --color-base: var(--app-base);
+  --color-surface: var(--app-surface);
+  --color-elevated: var(--app-elevated);
+  --color-content: var(--app-content);
+  --color-muted: var(--app-muted);
+  --color-line: var(--app-line);
+  --color-accent: var(--app-accent);
+  --color-accent-contrast: var(--app-accent-contrast);
+  --color-danger: var(--app-danger);
+  --color-success: var(--app-success);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-base);
+    color: var(--color-content);
+  }
+}
