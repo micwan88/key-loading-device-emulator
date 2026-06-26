@@ -24,6 +24,5 @@ Refer to assets/file-structure.md
 
 ## 5. Project Rules
 
-- Use Podman in local machine (as docker can be run by root)
-- When building a Podman/Docker image must pass `GIT_COMMIT` (--short) as build-arg
-- Verify `micwan.git.commit` in container metadata to confirm picked a correct image for testing.
+- Every page required corresponding test
+- All tests must be passed before marking task completion
