@@ -1,2 +1,2 @@
-# key-loading-device-emulator
-Key loading device emulator
+# Key Loading Device (KLD) Emulator
+Key loading device (KLD) emulator
