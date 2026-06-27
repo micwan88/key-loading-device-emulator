@@ -7,7 +7,7 @@ author: user
 description: story template
 ---
 
-## Intuition/Objectives
+## Objectives/Intention/Intuition
 
 - xxxx
 - xxxx
