@@ -42,3 +42,7 @@ export function addKey(key: Omit<SymKey, "id">): SymKey {
 export function deleteKey(id: string): void {
   keys = keys.filter((k) => k.id !== id);
 }
+
+export function clearKeys(): void {
+  keys = [];
+}

@@ -21,7 +21,7 @@ export function renderZmkList(root: HTMLElement): void {
         </span>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-2">
+      <div class="grid gap-4 md:grid-cols-2 items-start">
         <ul data-testid="zmk-list" class="grid gap-2"></ul>
         <div data-testid="zmk-detail" class="rounded-lg border border-line bg-surface p-4"></div>
       </div>

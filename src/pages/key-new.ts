@@ -35,6 +35,17 @@ export function renderKeyNew(root: HTMLElement): void {
           <textarea data-testid="key-value" rows="2" class="${input}"></textarea>
         </label>
 
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="flex flex-col text-sm">
+            <span class="mb-1 text-muted">KCV</span>
+            <input data-testid="kcv" type="text" readonly class="${input} font-mono" />
+          </label>
+          <label data-testid="emv-kcv-row" class="flex flex-col text-sm hidden">
+            <span class="mb-1 text-muted">EMV KCV</span>
+            <input data-testid="emv-kcv" type="text" readonly class="${input} font-mono" />
+          </label>
+        </div>
+
         <div class="flex flex-wrap items-end gap-3">
           <button data-testid="gen-key" class="${btn}">Generate random key</button>
           <button data-testid="save-key" class="rounded bg-accent px-4 py-2 text-accent-contrast font-medium hover:opacity-90">
@@ -52,6 +63,9 @@ export function renderKeyNew(root: HTMLElement): void {
   const typeEl = $<HTMLSelectElement>("key-type");
   const valueEl = $<HTMLTextAreaElement>("key-value");
   const hintEl = $<HTMLSpanElement>("key-hint");
+  const kcvEl = $<HTMLInputElement>("kcv");
+  const emvKcvRowEl = $<HTMLLabelElement>("emv-kcv-row");
+  const emvKcvEl = $<HTMLInputElement>("emv-kcv");
   const statusEl = $<HTMLParagraphElement>("status");
 
   function setStatus(msg: string, kind: "ok" | "error" = "ok"): void {
@@ -59,13 +73,25 @@ export function renderKeyNew(root: HTMLElement): void {
     statusEl.className = `text-sm min-h-5 ${kind === "error" ? "text-danger" : "text-success"}`;
   }
 
-  // Max hex length (and hint) track the chosen type.
+  // Clear the computed KCV fields (e.g. when the value or type changes).
+  function clearKcv(): void {
+    kcvEl.value = "";
+    emvKcvEl.value = "";
+    emvKcvRowEl.classList.add("hidden");
+  }
+
+  // Max hex length (and hint) track the chosen type; a type change invalidates the
+  // current value and its KCVs, so clear them.
   function syncType(): void {
     const len = ZMK_KEY_LEN[typeEl.value as ZmkType];
     valueEl.maxLength = len * 2;
     hintEl.textContent = `${len * 2} hex chars (${len} bytes)`;
   }
-  typeEl.addEventListener("change", syncType);
+  typeEl.addEventListener("change", () => {
+    valueEl.value = "";
+    clearKcv();
+    syncType();
+  });
   syncType();
 
   $("gen-key-id").addEventListener("click", () => {
@@ -75,9 +101,18 @@ export function renderKeyNew(root: HTMLElement): void {
   });
 
   $("gen-key").addEventListener("click", () => {
-    const bytes = new Uint8Array(ZMK_KEY_LEN[typeEl.value as ZmkType]);
+    const type = typeEl.value as ZmkType;
+    const bytes = new Uint8Array(ZMK_KEY_LEN[type]);
     crypto.getRandomValues(bytes);
     valueEl.value = bytesToHex(bytes).toUpperCase();
+    kcvEl.value = computeKcv(type, bytes);
+    if (type.startsWith("AES")) {
+      emvKcvEl.value = computeEmvKcv(bytes);
+      emvKcvRowEl.classList.remove("hidden");
+    } else {
+      emvKcvEl.value = "";
+      emvKcvRowEl.classList.add("hidden");
+    }
   });
 
   $("save-key").addEventListener("click", () => {
