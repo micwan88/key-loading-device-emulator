@@ -18,6 +18,20 @@ describe("landing page", () => {
     expect(item.textContent).toContain("EC Keypair");
     expect(item.getAttribute("href")).toBe("#/ec-keypair");
   });
+
+  it("shows a RED production warning", () => {
+    const root = mount(renderLanding);
+    const warn = root.querySelector('[data-testid="prod-warning"]') as HTMLElement;
+    expect(warn.textContent).toMatch(/don't use it for production/i);
+    expect(warn.className).toContain("text-danger");
+  });
+
+  it("includes a Key Management menu item linking to /keys", () => {
+    const root = mount(renderLanding);
+    const items = [...root.querySelectorAll('[data-testid="menu-item"]')] as HTMLAnchorElement[];
+    const keys = items.find((a) => a.getAttribute("href") === "#/keys");
+    expect(keys?.textContent).toContain("Key Management");
+  });
 });
 
 describe("EC Keypair page", () => {

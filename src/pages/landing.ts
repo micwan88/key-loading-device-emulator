@@ -17,12 +17,20 @@ const MENU: MenuItem[] = [
     path: "#/zmk",
     description: "Derive and manage ZMKs via ECDH key exchange (ANSI X9.63 KDF).",
   },
+  {
+    label: "Key Management",
+    path: "#/keys",
+    description: "Generate, import and export symmetric keys as TR-31 key blocks.",
+  },
 ];
 
 export function renderLanding(root: HTMLElement): void {
   root.innerHTML = `
     <section class="mx-auto max-w-3xl p-6">
       <h1 class="text-2xl font-bold mb-2">Key Loading Device Emulator</h1>
+      <p data-testid="prod-warning" class="text-danger font-semibold mb-2">
+        Designed for testing only — DON'T USE IT FOR PRODUCTION.
+      </p>
       <p class="text-muted mb-6">
         Emulate crypto key loading device flows to test your system.
       </p>

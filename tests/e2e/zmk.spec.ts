@@ -30,6 +30,10 @@ test("full ZMK derive, save, list, delete, and MZMKdata CSV round-trip", async (
   await expect(page.getByTestId("new-zmk")).toBeEnabled();
   await page.getByTestId("new-zmk").click();
   await expect(page.getByTestId("derive-desc")).toContainText("P-521");
+  // TMD section shows the two labelled actions.
+  await expect(page.getByText("Exchange your derived ZMK to Thales TMD")).toBeVisible();
+  await expect(page.getByText("Derive the ZMK from Thales TMD")).toBeVisible();
+  await expect(page.getByText("Import MZMKdata CSV")).toBeVisible();
 
   // 3) Derive a ZMK (use our own public key as the counterparty).
   await page.getByTestId("gen-zmk-id").click(); // auto-generate the first ID → "1"
@@ -63,6 +67,7 @@ test("full ZMK derive, save, list, delete, and MZMKdata CSV round-trip", async (
 
   // 5) It appears in the list with details; uppercase HEX shown.
   await page.goto("/key-loading-device-emulator/#/zmk");
+  await expect(page.getByTestId("zmk-item").first()).toContainText(`(${derivedKcv})`);
   await page.getByTestId("zmk-item").first().click();
   await expect(page.getByTestId("detail-id")).toHaveText("1");
   await expect(page.getByTestId("detail-kcv")).toHaveText(derivedKcv!);

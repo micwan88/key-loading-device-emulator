@@ -48,7 +48,7 @@ export function renderZmkList(root: HTMLElement): void {
                 : "border-line bg-surface hover:border-accent"
             }">
             <span class="font-medium text-content">${escapeHtml(z.zmkId)}</span>
-            <span class="text-xs text-muted ml-2">${z.type}</span>
+            <span class="text-xs text-muted ml-2">${z.type} (${z.kcv})</span>
           </button>
         </li>`,
       )

@@ -110,12 +110,18 @@ export function renderZmkDerive(root: HTMLElement): void {
         <section class="rounded-lg border border-line bg-surface p-4">
           <h2 class="font-semibold mb-1">Thales PayShield Trusted Management Device (TMD)</h2>
           <p class="text-muted text-sm mb-4">Exchange MZMK data with a Thales TMD.</p>
-          <div class="flex flex-wrap items-end gap-3">
-            <button data-testid="gen-csv" class="${btn}" disabled>Generate MZMKdata CSV</button>
-            <label class="${btn} cursor-pointer">
-              Exchange ZMK from MZMKdata CSV
-              <input data-testid="exchange-file" type="file" accept=".csv" class="hidden" />
-            </label>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="flex flex-col gap-2">
+              <span class="text-sm text-muted">Exchange your derived ZMK to Thales TMD</span>
+              <button data-testid="gen-csv" class="${btn}" disabled>Generate MZMKdata CSV</button>
+            </div>
+            <div class="flex flex-col gap-2">
+              <span class="text-sm text-muted">Derive the ZMK from Thales TMD</span>
+              <label class="${btn} cursor-pointer text-center">
+                Import MZMKdata CSV
+                <input data-testid="exchange-file" type="file" accept=".csv" class="hidden" />
+              </label>
+            </div>
           </div>
         </section>
 
