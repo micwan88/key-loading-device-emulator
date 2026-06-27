@@ -44,6 +44,11 @@ describe("ZMK list page", () => {
     addZmk({ zmkId: "42", type: "AES128", keyHex: "00112233", kcv: "ABCDEF", emvKcv: "123456" });
     const root = mount(renderZmkList);
 
+    // List item shows ID, type and (KCV).
+    expect((root.querySelector('[data-testid="zmk-item"]') as HTMLElement).textContent).toContain(
+      "(ABCDEF)",
+    );
+
     // No delete button before selection.
     expect(root.querySelector('[data-testid="delete-zmk"]')).toBeNull();
 

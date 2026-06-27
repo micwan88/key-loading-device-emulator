@@ -5,6 +5,10 @@ import { renderLanding } from "./pages/landing.ts";
 import { renderEcKeypair } from "./pages/ec-keypair.ts";
 import { renderZmkList } from "./pages/zmk-list.ts";
 import { renderZmkDerive } from "./pages/zmk-derive.ts";
+import { renderKeyList } from "./pages/key-list.ts";
+import { renderKeyNew } from "./pages/key-new.ts";
+import { renderKeyImport } from "./pages/key-import.ts";
+import { renderKeyExport } from "./pages/key-export.ts";
 
 applyTheme();
 
@@ -13,12 +17,17 @@ const routes: Route[] = [
   { path: "/ec-keypair", title: "EC Keypair", render: renderEcKeypair },
   { path: "/zmk", title: "ZMK", render: renderZmkList },
   { path: "/zmk/derive", title: "Derive ZMK", render: renderZmkDerive },
+  { path: "/keys", title: "Key Management", render: renderKeyList },
+  { path: "/keys/new", title: "New Key", render: renderKeyNew },
+  { path: "/keys/import", title: "Import Key", render: renderKeyImport },
+  { path: "/keys/export", title: "Export Key", render: renderKeyExport },
 ];
 
 const NAV = [
   { path: "#/", label: "Home" },
   { path: "#/ec-keypair", label: "EC Keypair" },
   { path: "#/zmk", label: "ZMK" },
+  { path: "#/keys", label: "Key Management" },
 ];
 
 const app = document.getElementById("app")!;
