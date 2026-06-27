@@ -70,6 +70,92 @@ test("Key Management: new key, TR-31 export, re-import round trip, delete", asyn
   await expect(page.getByTestId("key-item")).toHaveCount(1);
 });
 
+test("TMD CSV: export a key to CSV, then import it back under the same ZMK", async ({ page }, testInfo) => {
+  // Keypair + our public hex.
+  await page.goto("#/ec-keypair");
+  await page.getByTestId("generate").click();
+  await expect(page.getByTestId("private-hex")).not.toHaveValue("");
+  const pubDownload = page.waitForEvent("download");
+  await page.getByTestId("spki-format").selectOption("hex");
+  await page.getByTestId("export-public").click();
+  const pubPath = testInfo.outputPath("pub.hex");
+  await (await pubDownload).saveAs(pubPath);
+  const ourPublicHex = (await readFile(pubPath, "utf8")).trim();
+
+  // ZMK (AES256) to protect the block.
+  await page.goto("#/zmk/derive");
+  await page.getByTestId("gen-zmk-id").click();
+  await page.getByTestId("their-public").fill(ourPublicHex);
+  await page.getByTestId("gen-shared").click();
+  await page.getByTestId("zmk-type").selectOption("AES256");
+  await page.getByTestId("derive").click();
+  await expect(page.getByTestId("status")).toContainText(/derived and saved/i);
+
+  // New working key (AES128).
+  await page.goto("#/keys");
+  await page.getByTestId("new-key").click();
+  await page.getByTestId("gen-key-id").click();
+  await page.getByTestId("key-type").selectOption("AES128");
+  await page.getByTestId("gen-key").click();
+  await page.getByTestId("save-key").click();
+  await page.getByTestId("key-item").first().click();
+  const origKcv = (await page.getByTestId("detail-kcv").textContent())!;
+  const origKey = (await page.getByTestId("detail-key").textContent())!;
+
+  // Export to a TMD CSV.
+  await page.getByTestId("export-key").click();
+  await page.getByTestId("key-name").fill("MYWORKKEY");
+  const csvDownload = page.waitForEvent("download");
+  await page.getByTestId("export-csv").click();
+  const csvPath = testInfo.outputPath("export_key.csv");
+  await (await csvDownload).saveAs(csvPath);
+  await expect(page.getByTestId("status")).toContainText(/key csv exported/i);
+
+  // Import the CSV back — recovers the same key + KCV under a new ID.
+  await page.goto("#/keys");
+  await page.getByTestId("import-key").click();
+  await page.getByTestId("gen-key-id").click();
+  await page.getByTestId("import-csv-file").setInputFiles(csvPath);
+
+  await expect(page.getByTestId("key-item")).toHaveCount(2);
+  await page.getByTestId("key-item").nth(1).click();
+  await expect(page.getByTestId("detail-kcv")).toHaveText(origKcv);
+  await expect(page.getByTestId("detail-key")).toHaveText(origKey);
+});
+
+test("Backup then Restore recovers a deleted key (KCV verified)", async ({ page }, testInfo) => {
+  // A working key in the app (no ZMK/keypair needed for this path).
+  await page.goto("#/keys");
+  await page.getByTestId("new-key").click();
+  await page.getByTestId("key-id").fill("42");
+  await page.getByTestId("key-type").selectOption("AES128");
+  await page.getByTestId("gen-key").click();
+  await page.getByTestId("save-key").click();
+  await expect(page.getByTestId("key-item")).toHaveCount(1);
+
+  // Backup the app.
+  await page.goto("#/");
+  const bakDownload = page.waitForEvent("download");
+  await page.getByTestId("backup").click();
+  const bakPath = testInfo.outputPath("backup.bak");
+  await (await bakDownload).saveAs(bakPath);
+  await expect(page.getByTestId("backup-status")).toContainText(/backup created/i);
+
+  // Delete the key.
+  await page.goto("#/keys");
+  await page.getByTestId("key-item").first().click();
+  await page.getByTestId("delete-key").click();
+  await expect(page.getByTestId("key-item")).toHaveCount(0);
+
+  // Restore from the backup — the key comes back.
+  await page.goto("#/");
+  await page.getByTestId("restore-file").setInputFiles(bakPath);
+  await expect(page.getByTestId("backup-status")).toContainText(/1 key/i);
+  await page.goto("#/keys");
+  await expect(page.getByTestId("key-item")).toHaveCount(1);
+  await expect(page.getByTestId("key-item").first()).toContainText("42");
+});
+
 test("Import rejects a wrong ZMK (MAC failure) without saving", async ({ page }, testInfo) => {
   // Keypair + public hex.
   await page.goto("#/ec-keypair");

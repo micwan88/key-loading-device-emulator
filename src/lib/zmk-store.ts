@@ -40,3 +40,7 @@ export function addZmk(zmk: Omit<Zmk, "id">): Zmk {
 export function deleteZmk(id: string): void {
   zmks = zmks.filter((z) => z.id !== id);
 }
+
+export function clearZmks(): void {
+  zmks = [];
+}

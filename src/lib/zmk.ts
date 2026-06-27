@@ -28,7 +28,7 @@ export const ZMK_SCHEME: Record<ZmkType, string> = {
   AES256: "256-bit AES",
 };
 
-const SCHEME_TO_TYPE: Record<string, ZmkType> = Object.fromEntries(
+export const SCHEME_TO_TYPE: Record<string, ZmkType> = Object.fromEntries(
   Object.entries(ZMK_SCHEME).map(([t, s]) => [s, t as ZmkType]),
 ) as Record<string, ZmkType>;
 

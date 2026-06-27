@@ -32,6 +32,14 @@ describe("landing page", () => {
     const keys = items.find((a) => a.getAttribute("href") === "#/keys");
     expect(keys?.textContent).toContain("Key Management");
   });
+
+  it("offers Backup and Restore Backup controls", () => {
+    const root = mount(renderLanding);
+    expect(root.querySelector('[data-testid="backup"]')).toBeTruthy();
+    const restore = root.querySelector('[data-testid="restore-file"]') as HTMLInputElement;
+    expect(restore).toBeTruthy();
+    expect(restore.accept).toContain(".bak");
+  });
 });
 
 describe("EC Keypair page", () => {
