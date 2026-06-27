@@ -3,11 +3,12 @@
 import type { ZmkType } from "./zmk.ts";
 
 export interface Zmk {
-  id: string;
-  name: string;
+  id: string; // internal record key (UUID)
+  zmkId: string; // user-facing ZMK ID, 1-5 digits, value >= 1
   type: ZmkType;
   keyHex: string; // cleartext key, uppercase HEX
   kcv: string; // uppercase
+  emvKcv?: string; // uppercase; AES keys only
 }
 
 let zmks: Zmk[] = [];
@@ -18,6 +19,16 @@ export function listZmks(): Zmk[] {
 
 export function getZmk(id: string): Zmk | undefined {
   return zmks.find((z) => z.id === id);
+}
+
+export function hasZmkId(zmkId: string): boolean {
+  return zmks.some((z) => z.zmkId === zmkId);
+}
+
+// Next ZMK ID = max existing numeric ID + 1 (starts at 1 when empty).
+export function nextZmkId(): number {
+  const max = zmks.reduce((m, z) => Math.max(m, Number(z.zmkId)), 0);
+  return max + 1;
 }
 
 export function addZmk(zmk: Omit<Zmk, "id">): Zmk {

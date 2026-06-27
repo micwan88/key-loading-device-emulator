@@ -59,6 +59,13 @@ export function computeKcv(type: ZmkType, key: Uint8Array): string {
   return cipher.ciphertext.toString(CryptoJS.enc.Hex).slice(0, 6).toUpperCase();
 }
 
+// EMV KCV (AES only) — first 3 bytes of ECB-encrypting a 16-byte block of 0x01.
+export function computeEmvKcv(key: Uint8Array): string {
+  const opts = { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.NoPadding };
+  const cipher = CryptoJS.AES.encrypt(CryptoJS.enc.Hex.parse("01".repeat(16)), toWordArray(key), opts);
+  return cipher.ciphertext.toString(CryptoJS.enc.Hex).slice(0, 6).toUpperCase();
+}
+
 // ---------------------------------------------------------------------------
 // ANSI X9.63 KDF (SHA-256):
 //   K = Hash(Z ‖ Counter ‖ SharedInfo) ‖ Hash(Z ‖ Counter+1 ‖ SharedInfo) ‖ ...
@@ -125,6 +132,7 @@ export interface DerivedZmk {
   keyBytes: Uint8Array;
   keyHex: string; // uppercase
   kcv: string; // uppercase
+  emvKcv?: string; // uppercase; AES keys only
 }
 
 export async function deriveZmk(input: {
@@ -141,6 +149,7 @@ export async function deriveZmk(input: {
     keyBytes,
     keyHex: bytesToHex(keyBytes).toUpperCase(),
     kcv: computeKcv(input.type, keyBytes),
+    emvKcv: input.type.startsWith("AES") ? computeEmvKcv(keyBytes) : undefined,
   };
 }
 

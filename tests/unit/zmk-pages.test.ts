@@ -41,24 +41,33 @@ describe("ZMK list page", () => {
   });
 
   it("shows details and enables delete only after selecting a ZMK", () => {
-    addZmk({ name: "Test ZMK", type: "AES128", keyHex: "00112233", kcv: "ABCDEF" });
+    addZmk({ zmkId: "42", type: "AES128", keyHex: "00112233", kcv: "ABCDEF", emvKcv: "123456" });
     const root = mount(renderZmkList);
 
     // No delete button before selection.
     expect(root.querySelector('[data-testid="delete-zmk"]')).toBeNull();
 
     (root.querySelector('[data-testid="zmk-item"]') as HTMLButtonElement).click();
-    expect((root.querySelector('[data-testid="detail-name"]') as HTMLElement).textContent).toBe(
-      "Test ZMK",
-    );
+    expect((root.querySelector('[data-testid="detail-id"]') as HTMLElement).textContent).toBe("42");
     expect((root.querySelector('[data-testid="detail-kcv"]') as HTMLElement).textContent).toBe(
       "ABCDEF",
+    );
+    // EMV KCV row shown for AES.
+    expect((root.querySelector('[data-testid="detail-emv-kcv"]') as HTMLElement).textContent).toBe(
+      "123456",
     );
 
     const del = root.querySelector('[data-testid="delete-zmk"]') as HTMLButtonElement;
     expect(del).toBeTruthy();
     del.click();
     expect(listZmks()).toHaveLength(0);
+  });
+
+  it("hides the EMV KCV row for non-AES ZMKs", () => {
+    addZmk({ zmkId: "7", type: "DES2EDE", keyHex: "00112233", kcv: "ABCDEF" });
+    const root = mount(renderZmkList);
+    (root.querySelector('[data-testid="zmk-item"]') as HTMLButtonElement).click();
+    expect(root.querySelector('[data-testid="detail-emv-kcv"]')).toBeNull();
   });
 });
 
@@ -76,15 +85,42 @@ describe("ZMK derive page", () => {
     );
   });
 
-  it("requires a ZMK name before deriving", () => {
+  it("rejects an empty or zero ZMK ID before deriving", () => {
     setKeyPair(fakeKeyPair);
     const root = mount(renderZmkDerive);
     const derive = root.querySelector('[data-testid="derive"]') as HTMLButtonElement;
+    const idEl = root.querySelector('[data-testid="zmk-id"]') as HTMLInputElement;
     expect(derive.disabled).toBe(false);
-    derive.click(); // name is empty → validation, no crypto reached
+
+    derive.click(); // empty → validation, no crypto reached
     expect((root.querySelector('[data-testid="status"]') as HTMLElement).textContent).toMatch(
-      /enter a zmk name/i,
+      /1-5 digits/i,
     );
+
+    idEl.value = "00000"; // all-zero → invalid
+    derive.click();
+    expect((root.querySelector('[data-testid="status"]') as HTMLElement).textContent).toMatch(
+      /1-5 digits/i,
+    );
+  });
+
+  it("rejects a duplicate ZMK ID", () => {
+    setKeyPair(fakeKeyPair);
+    addZmk({ zmkId: "5", type: "AES128", keyHex: "00", kcv: "ABCDEF" });
+    const root = mount(renderZmkDerive);
+    (root.querySelector('[data-testid="zmk-id"]') as HTMLInputElement).value = "5";
+    (root.querySelector('[data-testid="derive"]') as HTMLButtonElement).click();
+    expect((root.querySelector('[data-testid="status"]') as HTMLElement).textContent).toMatch(
+      /already exists/i,
+    );
+  });
+
+  it("generates a ZMK ID by incrementing from the current max", () => {
+    setKeyPair(fakeKeyPair);
+    addZmk({ zmkId: "12", type: "AES128", keyHex: "00", kcv: "ABCDEF" });
+    const root = mount(renderZmkDerive);
+    (root.querySelector('[data-testid="gen-zmk-id"]') as HTMLButtonElement).click();
+    expect((root.querySelector('[data-testid="zmk-id"]') as HTMLInputElement).value).toBe("13");
   });
 
   it("shows the current curve and 5 ZMK types", () => {

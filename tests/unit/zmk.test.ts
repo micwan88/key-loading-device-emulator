@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { generateKeyPair, exportPublicSpki, hexToBytes, bytesToHex } from "../../src/lib/ec.ts";
 import {
   computeKcv,
+  computeEmvKcv,
   x963Kdf,
   deriveZmk,
   randomSharedInfo,
@@ -25,6 +26,26 @@ describe("KCV known-answer vectors (encrypt zero block, first 3 bytes)", () => {
   it("3DES all-zero key → 8CA64D (DES2EDE and DES3EDE)", () => {
     expect(computeKcv("DES2EDE", new Uint8Array(16))).toBe("8CA64D");
     expect(computeKcv("DES3EDE", new Uint8Array(24))).toBe("8CA64D");
+  });
+});
+
+describe("EMV KCV (encrypt 16 × 0x01 with AES key, first 3 bytes)", () => {
+  it("AES-128 all-zero key → E14D5D and differs from the standard KCV", () => {
+    expect(computeEmvKcv(new Uint8Array(16))).toBe("E14D5D");
+    expect(computeEmvKcv(new Uint8Array(16))).not.toBe(computeKcv("AES128", new Uint8Array(16)));
+  });
+
+  it("deriveZmk returns emvKcv for AES types only", async () => {
+    const us = await generateKeyPair("P-256");
+    const them = await generateKeyPair("P-256");
+    const theirPub = (await exportPublicSpki(them, "der")) as Uint8Array<ArrayBuffer>;
+    const sharedInfo = randomSharedInfo();
+
+    const aes = await deriveZmk({ ourKeyPair: us, theirPublicDer: theirPub, sharedInfo, type: "AES128" });
+    expect(aes.emvKcv).toMatch(/^[0-9A-F]{6}$/);
+
+    const des = await deriveZmk({ ourKeyPair: us, theirPublicDer: theirPub, sharedInfo, type: "DES2EDE" });
+    expect(des.emvKcv).toBeUndefined();
   });
 });
 

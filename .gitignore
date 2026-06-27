@@ -18,3 +18,4 @@ playwright/.cache
 MZMKdata*.csv
 ec-keypair-*.pem
 ec-public-*.spki.*
+testdata/

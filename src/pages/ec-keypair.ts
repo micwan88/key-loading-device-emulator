@@ -65,15 +65,18 @@ export function renderEcKeypair(root: HTMLElement): void {
         </div>
       </div>
 
-      <div class="flex flex-wrap items-end gap-3 mb-6 border-t border-line pt-6">
+      <div class="flex flex-wrap items-end gap-3 mb-4 border-t border-line pt-6">
         <button data-testid="save-keypair"
           class="rounded border border-line px-4 py-2 hover:bg-elevated">
           Save keypair (PKCS#8 PEM)
         </button>
         <label class="rounded border border-line px-4 py-2 hover:bg-elevated cursor-pointer">
-          Restore keypair from file
-          <input data-testid="restore-file" type="file" accept=".pem,.key,.txt" class="hidden" />
+          Restore keypair (PKCS#8 PEM)
+          <input data-testid="restore-file" type="file" accept=".pem" class="hidden" />
         </label>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-3 mb-6">
         <label class="flex flex-col text-sm">
           <span class="mb-1 text-muted">Public export format</span>
           <select data-testid="spki-format" class="rounded border border-line bg-elevated px-3 py-2">

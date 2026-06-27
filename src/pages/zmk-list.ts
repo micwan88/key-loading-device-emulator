@@ -47,7 +47,7 @@ export function renderZmkList(root: HTMLElement): void {
                 ? "border-accent bg-elevated"
                 : "border-line bg-surface hover:border-accent"
             }">
-            <span class="font-medium text-content">${escapeHtml(z.name)}</span>
+            <span class="font-medium text-content">${escapeHtml(z.zmkId)}</span>
             <span class="text-xs text-muted ml-2">${z.type}</span>
           </button>
         </li>`,
@@ -63,10 +63,15 @@ export function renderZmkList(root: HTMLElement): void {
     }
     detailEl.innerHTML = `
       <dl class="grid gap-3 text-sm">
-        <div><dt class="text-muted">Name</dt><dd data-testid="detail-name" class="text-content">${escapeHtml(z.name)}</dd></div>
+        <div><dt class="text-muted">ZMK ID</dt><dd data-testid="detail-id" class="text-content">${escapeHtml(z.zmkId)}</dd></div>
         <div><dt class="text-muted">Type</dt><dd data-testid="detail-type" class="text-content">${z.type}</dd></div>
         <div><dt class="text-muted">Key (HEX)</dt><dd data-testid="detail-key" class="font-mono text-xs break-all text-content">${z.keyHex}</dd></div>
         <div><dt class="text-muted">KCV</dt><dd data-testid="detail-kcv" class="font-mono text-content">${z.kcv}</dd></div>
+        ${
+          z.emvKcv
+            ? `<div><dt class="text-muted">EMV KCV</dt><dd data-testid="detail-emv-kcv" class="font-mono text-content">${z.emvKcv}</dd></div>`
+            : ""
+        }
       </dl>
       <button data-testid="delete-zmk"
         class="mt-4 rounded border border-danger text-danger px-4 py-2 hover:bg-danger hover:text-base transition">
