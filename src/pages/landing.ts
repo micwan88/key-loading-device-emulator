@@ -1,6 +1,6 @@
 // Landing page with the feature menu.
 
-import { buildBackupZip, restoreBackupZip } from "../lib/backup.ts";
+import { buildBackupZip, restoreBackupZip, commitPending } from "../lib/backup.ts";
 
 interface MenuItem {
   label: string;
@@ -62,6 +62,17 @@ export function renderLanding(root: HTMLElement): void {
           </label>
         </div>
         <p data-testid="backup-status" role="status" class="text-sm min-h-5 mt-2"></p>
+
+        <div data-testid="restore-prompt" class="hidden mt-3 rounded-lg border border-line bg-surface p-4">
+          <p class="text-sm mb-1 font-semibold" style="color:#f59e0b">Some keys have a KCV that does not match their key value:</p>
+          <ul data-testid="restore-prompt-list" class="text-sm text-muted list-disc pl-5 mb-3"></ul>
+          <div class="flex flex-wrap gap-3">
+            <button data-testid="restore-accept"
+              class="rounded bg-accent px-4 py-2 text-accent-contrast font-medium hover:opacity-90">Accept</button>
+            <button data-testid="restore-skip"
+              class="rounded border border-line px-4 py-2 hover:bg-elevated">Skip</button>
+          </div>
+        </div>
       </div>
     </section>
   `;
@@ -96,19 +107,58 @@ export function renderLanding(root: HTMLElement): void {
     }
   });
 
+  const promptEl = $<HTMLDivElement>("restore-prompt");
+  const promptListEl = $<HTMLUListElement>("restore-prompt-list");
+
+  // Report the restore outcome, folding in any accepted/skipped mismatched rows.
+  function reportRestore(
+    base: { keypair: boolean; zmks: number; keys: number; skipped: string[] },
+    extra: { zmks: number; keys: number },
+    mismatchNote: string,
+  ): void {
+    const parts = [
+      base.keypair ? "keypair" : "no keypair",
+      `${base.zmks + extra.zmks} ZMK(s)`,
+      `${base.keys + extra.keys} key(s)`,
+    ];
+    const skipped = base.skipped.length ? ` Skipped: ${base.skipped.join("; ")}.` : "";
+    const isError = base.skipped.length > 0 || mismatchNote !== "";
+    setStatus(`Restored ${parts.join(", ")}.${mismatchNote}${skipped}`, isError ? "error" : "ok");
+  }
+
   const restoreEl = $<HTMLInputElement>("restore-file");
   restoreEl.addEventListener("change", async () => {
     const file = restoreEl.files?.[0];
     if (!file) return;
+    promptEl.classList.add("hidden");
     try {
       const summary = await restoreBackupZip(new Uint8Array(await file.arrayBuffer()));
-      const parts = [
-        summary.keypair ? "keypair" : "no keypair",
-        `${summary.zmks} ZMK(s)`,
-        `${summary.keys} key(s)`,
-      ];
-      const skipped = summary.skipped.length ? ` Skipped: ${summary.skipped.join("; ")}.` : "";
-      setStatus(`Restored ${parts.join(", ")}.${skipped}`, summary.skipped.length ? "error" : "ok");
+      const base = { keypair: summary.keypair, zmks: summary.zmks, keys: summary.keys, skipped: summary.skipped };
+
+      if (summary.pending.length === 0) {
+        reportRestore(base, { zmks: 0, keys: 0 }, "");
+        return;
+      }
+
+      // KCV mismatches found — ask the user to Accept (import anyway, with a recomputed
+      // correct KCV) or Skip all of them.
+      const pending = summary.pending;
+      promptListEl.innerHTML = pending
+        .map((r) => `<li>${r.label} ${r.id} (${r.type}): backup ${r.backupKcv}, computed ${r.computedKcv}</li>`)
+        .join("");
+      promptEl.classList.remove("hidden");
+
+      const decide = (accept: boolean): void => {
+        promptEl.classList.add("hidden");
+        const extra = accept ? commitPending(pending) : { zmks: 0, keys: 0 };
+        const note = accept
+          ? ` Accepted ${pending.length} key(s) with mismatched KCV (recomputed).`
+          : ` Skipped ${pending.length} key(s) with mismatched KCV.`;
+        reportRestore(base, extra, note);
+      };
+
+      $("restore-accept").onclick = () => decide(true);
+      $("restore-skip").onclick = () => decide(false);
     } catch (err) {
       setStatus(`Restore failed: ${(err as Error).message}`, "error");
     } finally {

@@ -66,34 +66,50 @@ export async function buildBackupZip(): Promise<Uint8Array> {
   return zipSync(files);
 }
 
-export interface RestoreSummary {
-  keypair: boolean; // a keypair was restored
-  zmks: number; // ZMKs restored
-  keys: number; // keys restored
-  skipped: string[]; // human-readable reasons for skipped rows
+// A KCV-mismatched row held back from restore until the user chooses Accept or Skip.
+export interface PendingRow {
+  store: "zmk" | "key";
+  label: string; // "ZMK" | "Key" — for human-readable messages
+  id: string;
+  type: ZmkType;
+  keyHex: string;
+  backupKcv: string; // KCV recorded in the backup file
+  computedKcv: string; // KCV computed from the key value
 }
 
-// Validate a row, recompute its KCV, and return the saveable record or a skip reason.
-function verifyRow(label: string, row: KeyRow): { ok: true; emvKcv?: string } | { ok: false; reason: string } {
+export interface RestoreSummary {
+  keypair: boolean; // a keypair was restored
+  zmks: number; // ZMKs restored (matching KCV)
+  keys: number; // keys restored (matching KCV)
+  skipped: string[]; // structurally-invalid rows that were dropped
+  pending: PendingRow[]; // KCV-mismatched rows awaiting the user's Accept/Skip choice
+}
+
+type RowResult =
+  | { kind: "ok"; emvKcv?: string }
+  | { kind: "mismatch"; computed: string }
+  | { kind: "invalid"; reason: string };
+
+// Validate a row and recompute its KCV: ok (matches), mismatch (KCV differs), or
+// invalid (structurally broken — unknown type or non-hex key value).
+function classifyRow(label: string, row: KeyRow): RowResult {
   if (!ZMK_TYPES.includes(row.type)) {
-    return { ok: false, reason: `${label} ${row.id}: unknown type "${row.type}"` };
+    return { kind: "invalid", reason: `${label} ${row.id}: unknown type "${row.type}"` };
   }
   let bytes: Uint8Array;
   try {
     bytes = hexToBytes(row.keyHex);
   } catch {
-    return { ok: false, reason: `${label} ${row.id}: invalid key value` };
+    return { kind: "invalid", reason: `${label} ${row.id}: invalid key value` };
   }
   const kcv = computeKcv(row.type, bytes);
-  if (kcv !== row.kcv) {
-    return { ok: false, reason: `${label} ${row.id}: KCV mismatch (backup ${row.kcv}, computed ${kcv})` };
-  }
-  return { ok: true, emvKcv: row.type.startsWith("AES") ? computeEmvKcv(bytes) : undefined };
+  if (kcv !== row.kcv) return { kind: "mismatch", computed: kcv };
+  return { kind: "ok", emvKcv: row.type.startsWith("AES") ? computeEmvKcv(bytes) : undefined };
 }
 
 export async function restoreBackupZip(bytes: Uint8Array): Promise<RestoreSummary> {
   const files = unzipSync(bytes);
-  const summary: RestoreSummary = { keypair: false, zmks: 0, keys: 0, skipped: [] };
+  const summary: RestoreSummary = { keypair: false, zmks: 0, keys: 0, skipped: [], pending: [] };
 
   // Parse + verify everything BEFORE mutating state, so a malformed archive doesn't
   // wipe the app's current data.
@@ -109,22 +125,51 @@ export async function restoreBackupZip(bytes: Uint8Array): Promise<RestoreSummar
   setKeyPair(pair);
   summary.keypair = pair !== null;
 
-  for (const row of zmkRows) {
-    const v = verifyRow("ZMK", row);
-    if (!v.ok) summary.skipped.push(v.reason);
-    else {
+  const handle = (store: "zmk" | "key", label: string, row: KeyRow): void => {
+    const v = classifyRow(label, row);
+    if (v.kind === "invalid") {
+      summary.skipped.push(v.reason);
+    } else if (v.kind === "mismatch") {
+      summary.pending.push({
+        store,
+        label,
+        id: row.id,
+        type: row.type,
+        keyHex: row.keyHex,
+        backupKcv: row.kcv,
+        computedKcv: v.computed,
+      });
+    } else if (store === "zmk") {
       addZmk({ zmkId: row.id, type: row.type, keyHex: row.keyHex, kcv: row.kcv, emvKcv: v.emvKcv });
       summary.zmks++;
-    }
-  }
-  for (const row of keyRows) {
-    const v = verifyRow("Key", row);
-    if (!v.ok) summary.skipped.push(v.reason);
-    else {
+    } else {
       addKey({ keyId: row.id, type: row.type, keyHex: row.keyHex, kcv: row.kcv, emvKcv: v.emvKcv });
       summary.keys++;
     }
-  }
+  };
+
+  for (const row of zmkRows) handle("zmk", "ZMK", row);
+  for (const row of keyRows) handle("key", "Key", row);
 
   return summary;
+}
+
+// Commit Accepted (KCV-mismatched) rows, storing a freshly recomputed correct KCV so
+// the app's displayed values stay self-consistent with the key value.
+export function commitPending(rows: PendingRow[]): { zmks: number; keys: number } {
+  let zmks = 0;
+  let keys = 0;
+  for (const r of rows) {
+    const bytes = hexToBytes(r.keyHex);
+    const kcv = computeKcv(r.type, bytes);
+    const emvKcv = r.type.startsWith("AES") ? computeEmvKcv(bytes) : undefined;
+    if (r.store === "zmk") {
+      addZmk({ zmkId: r.id, type: r.type, keyHex: r.keyHex, kcv, emvKcv });
+      zmks++;
+    } else {
+      addKey({ keyId: r.id, type: r.type, keyHex: r.keyHex, kcv, emvKcv });
+      keys++;
+    }
+  }
+  return { zmks, keys };
 }

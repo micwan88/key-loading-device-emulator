@@ -2,11 +2,11 @@
 
 import { navigate } from "../router.ts";
 import { hexToBytes } from "../lib/ec.ts";
-import { computeKcv, computeEmvKcv, SCHEME_TO_TYPE } from "../lib/zmk.ts";
+import { computeKcv, computeEmvKcv } from "../lib/zmk.ts";
 import { addKey, hasKeyId, nextKeyId } from "../lib/key-store.ts";
 import { listZmks, getZmk, type Zmk } from "../lib/zmk-store.ts";
 import { unwrapTr31 } from "../lib/tr31.ts";
-import { parseKeyCsv } from "../lib/key-tmd.ts";
+import { parseKeyCsv, KEY_ALGORITHM_TO_TYPE } from "../lib/key-tmd.ts";
 
 // ZMK option label: "{ID}: {Type} ({KCV})" with optional " - (EMV: {EMV KCV})".
 function zmkLabel(z: Zmk): string {
@@ -55,6 +55,8 @@ export function renderKeyImport(root: HTMLElement): void {
 
         <button data-testid="do-import" class="rounded bg-accent px-4 py-2 text-accent-contrast font-medium hover:opacity-90 disabled:opacity-40"
           ${zmks.length ? "" : "disabled"}>Import</button>
+
+        <hr class="border-line my-4" />
 
         <section class="rounded-lg border border-line bg-surface p-4">
           <h2 class="font-semibold mb-1">Thales PayShield Trusted Management Device (TMD)</h2>
@@ -140,7 +142,7 @@ export function renderKeyImport(root: HTMLElement): void {
       const parsed = parseKeyCsv(await file.text());
 
       // (3) ALGORITHM scheme matches the TR-31 header algorithm char (T/A).
-      const algoType = SCHEME_TO_TYPE[parsed.algorithmScheme];
+      const algoType = KEY_ALGORITHM_TO_TYPE[parsed.algorithmScheme];
       if (!algoType) {
         return setStatus(`Unknown ALGORITHM: ${parsed.algorithmScheme}.`, "error");
       }

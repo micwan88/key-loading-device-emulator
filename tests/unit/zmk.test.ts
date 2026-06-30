@@ -13,15 +13,15 @@ import {
   ZMK_SCHEME,
 } from "../../src/lib/zmk.ts";
 
-describe("KCV known-answer vectors (encrypt zero block, first 3 bytes)", () => {
-  it("AES-128 all-zero key → 66E94B", () => {
-    expect(computeKcv("AES128", new Uint8Array(16))).toBe("66E94B");
+describe("KCV known-answer vectors (AES = CMAC over zero block; 3DES = encrypt zero block; first 3 bytes)", () => {
+  it("AES-128 all-zero key → 763CBC (AES-CMAC)", () => {
+    expect(computeKcv("AES128", new Uint8Array(16))).toBe("763CBC");
   });
-  it("AES-192 all-zero key → AAE069", () => {
-    expect(computeKcv("AES192", new Uint8Array(24))).toBe("AAE069");
+  it("AES-192 all-zero key → 0B50E6 (AES-CMAC)", () => {
+    expect(computeKcv("AES192", new Uint8Array(24))).toBe("0B50E6");
   });
-  it("AES-256 all-zero key → DC95C0", () => {
-    expect(computeKcv("AES256", new Uint8Array(32))).toBe("DC95C0");
+  it("AES-256 all-zero key → 921105 (AES-CMAC)", () => {
+    expect(computeKcv("AES256", new Uint8Array(32))).toBe("921105");
   });
   it("3DES all-zero key → 8CA64D (DES2EDE and DES3EDE)", () => {
     expect(computeKcv("DES2EDE", new Uint8Array(16))).toBe("8CA64D");
