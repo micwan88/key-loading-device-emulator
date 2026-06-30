@@ -104,6 +104,8 @@ export function renderKeyExport(root: HTMLElement): void {
           <textarea data-testid="keyblock-out" rows="3" readonly class="${input}"></textarea>
         </label>
 
+        <hr class="border-line my-4" />
+
         <section class="rounded-lg border border-line bg-surface p-4">
           <h2 class="font-semibold mb-1">Thales PayShield Trusted Management Device (TMD)</h2>
           <p class="text-muted text-sm mb-4">Export key to Thales TMD</p>

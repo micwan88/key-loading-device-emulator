@@ -6,6 +6,7 @@
 
 import CryptoJS from "crypto-js";
 import { type CurveName, type ECKeyPair, bytesToHex, hexToBytes, exportPublicSpki } from "./ec.ts";
+import { cmac } from "./tr31.ts";
 
 export type ZmkType = "DES2EDE" | "DES3EDE" | "AES128" | "AES192" | "AES256";
 
@@ -33,7 +34,8 @@ export const SCHEME_TO_TYPE: Record<string, ZmkType> = Object.fromEntries(
 ) as Record<string, ZmkType>;
 
 // ---------------------------------------------------------------------------
-// KCV — first 3 bytes of ECB-encrypting an all-zero block with the key.
+// KCV — for AES, the first 3 bytes of AES-CMAC over a 16-byte all-zero block.
+// For 3DES, the first 3 bytes of ECB-encrypting an all-zero block.
 // ---------------------------------------------------------------------------
 
 function toWordArray(bytes: Uint8Array): CryptoJS.lib.WordArray {
@@ -41,21 +43,19 @@ function toWordArray(bytes: Uint8Array): CryptoJS.lib.WordArray {
 }
 
 export function computeKcv(type: ZmkType, key: Uint8Array): string {
-  const opts = { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.NoPadding };
-  let cipher: CryptoJS.lib.CipherParams;
-
   if (type.startsWith("AES")) {
-    cipher = CryptoJS.AES.encrypt(CryptoJS.enc.Hex.parse("00".repeat(16)), toWordArray(key), opts);
-  } else {
-    // crypto-js TripleDES needs a 24-byte key. Expand 2-key (16-byte) to K1|K2|K1.
-    let k = key;
-    if (type === "DES2EDE") {
-      k = new Uint8Array(24);
-      k.set(key);
-      k.set(key.slice(0, 8), 16);
-    }
-    cipher = CryptoJS.TripleDES.encrypt(CryptoJS.enc.Hex.parse("00".repeat(8)), toWordArray(k), opts);
+    return bytesToHex(cmac("AES", key, new Uint8Array(16)).slice(0, 3)).toUpperCase();
   }
+
+  // crypto-js TripleDES needs a 24-byte key. Expand 2-key (16-byte) to K1|K2|K1.
+  let k = key;
+  if (type === "DES2EDE") {
+    k = new Uint8Array(24);
+    k.set(key);
+    k.set(key.slice(0, 8), 16);
+  }
+  const opts = { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.NoPadding };
+  const cipher = CryptoJS.TripleDES.encrypt(CryptoJS.enc.Hex.parse("00".repeat(8)), toWordArray(k), opts);
   return cipher.ciphertext.toString(CryptoJS.enc.Hex).slice(0, 6).toUpperCase();
 }
 

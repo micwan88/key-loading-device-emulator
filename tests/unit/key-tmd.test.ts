@@ -22,7 +22,7 @@ describe("TMD key CSV", () => {
     expect(cols[5]).toBe("MYKEY"); // KEY NAME
     expect(cols[6]).toBe("ABCDEF"); // CHECK VALUE
     expect(cols[7]).toBe("2"); // COMPONENTS
-    expect(cols[8]).toBe("128-bit AES"); // ALGORITHM
+    expect(cols[8]).toBe("AES-128 bit"); // ALGORITHM (TMD key CSV uses "AES-NNN bit")
     expect(cols[9]).toBe("7"); // MZMK ID
     expect(cols[10]).toBe("112233"); // MZMK CHECK VALUE
     expect(cols[11]).toBe(block); // TR31 KEY BLOCK
@@ -42,6 +42,18 @@ describe("TMD key CSV", () => {
     expect(parsed.algorithmScheme).toBe("Double Length 3DES");
     expect(parsed.mzmkCheckValue).toBe("DDEEFF");
     expect(parsed.tr31Block).toBe(block);
+  });
+
+  it("uses 'AES-NNN bit' ALGORITHM labels for AES and round-trips them", () => {
+    for (const [keyType, label] of [
+      ["AES128", "AES-128 bit"],
+      ["AES192", "AES-192 bit"],
+      ["AES256", "AES-256 bit"],
+    ] as const) {
+      const csv = buildKeyCsv({ keyName: "K", keyType, kcv: "112233", mzmkId: "1", mzmkKcv: "445566", tr31Block: block });
+      expect(csv.trim().split("\n")[1].split(",")[8]).toBe(label);
+      expect(parseKeyCsv(csv).algorithmScheme).toBe(label);
+    }
   });
 
   it("throws on a missing column and on no data row", () => {

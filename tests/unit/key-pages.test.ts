@@ -225,6 +225,31 @@ async function importCsv(root: HTMLElement, csv: string): Promise<void> {
   for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
 }
 
+describe("TMD section layout", () => {
+  beforeEach(clearAll);
+
+  it("import page draws a horizontal divider above the TMD section", () => {
+    const imp = mount(renderKeyImport);
+    const hr = imp.querySelector("hr");
+    const tmd = imp.querySelector("section h2")?.textContent ?? "";
+    expect(hr).toBeTruthy();
+    expect(tmd).toMatch(/Trusted Management Device/);
+  });
+
+  it("export page draws a horizontal divider above the TMD section", () => {
+    const keyBytes = new Uint8Array(16).fill(0x10);
+    const key = addKey({
+      keyId: "10",
+      type: "AES128",
+      keyHex: bytesToHex(keyBytes).toUpperCase(),
+      kcv: computeKcv("AES128", keyBytes),
+    });
+    setExportTarget(key.id);
+    const exp = mount(renderKeyExport);
+    expect(exp.querySelector("hr")).toBeTruthy();
+  });
+});
+
 describe("Import key CSV (TMD) via the page", () => {
   beforeEach(clearAll);
 

@@ -1,13 +1,25 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { zipSync, strToU8 } from "fflate";
 import { renderLanding } from "../../src/pages/landing.ts";
 import { renderEcKeypair } from "../../src/pages/ec-keypair.ts";
 import { getKeyPair, setKeyPair } from "../../src/lib/store.ts";
+import { listKeys, clearKeys } from "../../src/lib/key-store.ts";
+import { clearZmks } from "../../src/lib/zmk-store.ts";
 
 function mount(render: (root: HTMLElement) => void): HTMLElement {
   const root = document.createElement("div");
   document.body.appendChild(root);
   render(root);
   return root;
+}
+
+// Feed a backup zip to the landing restore-file input and flush the async handler.
+async function restore(root: HTMLElement, zip: Uint8Array): Promise<void> {
+  const input = root.querySelector('[data-testid="restore-file"]') as HTMLInputElement;
+  const file = { name: "x.bak", arrayBuffer: async () => zip.buffer };
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  input.dispatchEvent(new Event("change"));
+  for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
 }
 
 describe("landing page", () => {
@@ -39,6 +51,39 @@ describe("landing page", () => {
     const restore = root.querySelector('[data-testid="restore-file"]') as HTMLInputElement;
     expect(restore).toBeTruthy();
     expect(restore.accept).toContain(".bak");
+  });
+});
+
+describe("landing restore — KCV-mismatch Accept/Skip prompt", () => {
+  beforeEach(() => {
+    clearKeys();
+    clearZmks();
+    setKeyPair(null);
+  });
+
+  // A backup zip with one key whose stored KCV is deliberately wrong.
+  const mismatchZip = (): Uint8Array =>
+    zipSync({ "keys.csv": strToU8("ID,Type,KeyValue,KCV\n7,AES128,00112233445566778899AABBCCDDEEFF,BADBAD\n") });
+
+  it("shows the prompt and commits the key (recomputed KCV) on Accept", async () => {
+    const root = mount(renderLanding);
+    await restore(root, mismatchZip());
+
+    const prompt = root.querySelector('[data-testid="restore-prompt"]') as HTMLElement;
+    expect(prompt.classList.contains("hidden")).toBe(false);
+    expect(root.querySelector('[data-testid="restore-prompt-list"]')?.textContent).toContain("Key 7");
+
+    (root.querySelector('[data-testid="restore-accept"]') as HTMLButtonElement).click();
+    expect(prompt.classList.contains("hidden")).toBe(true);
+    expect(listKeys().map((k) => k.keyId)).toEqual(["7"]);
+    expect(listKeys()[0].kcv).not.toBe("BADBAD"); // recomputed
+  });
+
+  it("omits the key on Skip", async () => {
+    const root = mount(renderLanding);
+    await restore(root, mismatchZip());
+    (root.querySelector('[data-testid="restore-skip"]') as HTMLButtonElement).click();
+    expect(listKeys()).toHaveLength(0);
   });
 });
 
